@@ -1,6 +1,416 @@
-"""Ponto de implementação das regras declarativas do enunciado."""
+from ast_nodes import (
+    BinaryExpr,
+    BinaryOperator,
+    BoolLiteral,
+    CallExpr,
+    IdentifierExpr,
+    IntLiteral,
+    TypeName,
+    UnaryExpr,
+    UnaryOperator,
+)
+from patterns import (
+    Args,
+    COND,
+    EFFECT,
+    IMM12,
+    POW2,
+    REG,
+    Need,
+    Pattern,
+    Rule,
+    imm12,
+    neg_imm12,
+    pow2,
+    signed_literal,
+)
 
 
 def catalogue():
-    """Codifique o catálogo do enunciado com Rule e Pattern."""
-    raise NotImplementedError("implemente o catálogo")
+    # Retorna a regra junto com seu custo e ação de acordo com a tabela do Enunciado.
+    # Literais e identificadores: valores em registradores ou operandos imediatos.
+    return [
+        Rule(
+            name="signed_integer_reg",
+            result=REG,
+            pattern=Pattern(predicate=lambda node: signed_literal(node) is not None),
+            cost=1,
+            action="load_integer",
+        ),
+        Rule(
+            name="bool_literal_reg",
+            result=REG,
+            pattern=Pattern(kind=BoolLiteral),
+            cost=1,
+            action="load_bool",
+        ),
+        Rule(
+            name="identifier_reg",
+            result=REG,
+            pattern=Pattern(kind=IdentifierExpr),
+            cost=0,
+            action="identifier",
+        ),
+        Rule(
+            name="literal_imm12",
+            result=IMM12,
+            pattern=Pattern(predicate=imm12),
+            cost=0,
+            action="literal_imm12",
+        ),
+        Rule(
+            name="literal_pow2",
+            result=POW2,
+            pattern=Pattern(predicate=pow2),
+            cost=0,
+            action="literal_pow2",
+        ),
+        Rule(
+            name="negate_arithmetic",
+            result=REG,
+            pattern=Pattern(
+                kind=UnaryExpr,
+                operator=UnaryOperator.NEGATE,
+                children=(Need(REG),),
+            ),
+            cost=1,
+            action="negate",
+        ),
+        Rule(
+            name="add_registers",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.ADD,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=1,
+            action="add",
+        ),
+        # Aritmética geral e variantes que aceitam imediato ou potência de dois.
+        Rule(
+            name="add_reg_imm12",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.ADD,
+                children=(Need(REG), Need(IMM12)),
+            ),
+            cost=1,
+            action="addi_right",
+        ),
+        Rule(
+            name="add_imm12_reg",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.ADD,
+                children=(Need(IMM12), Need(REG)),
+            ),
+            cost=1,
+            action="addi_left",
+        ),
+        Rule(
+            name="subtract_registers",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.SUBTRACT,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=1,
+            action="subtract",
+        ),
+        Rule(
+            name="subtract_negative_imm12",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.SUBTRACT,
+                children=(Need(REG), Pattern(predicate=neg_imm12)),
+            ),
+            cost=1,
+            action="subtract_imm12",
+        ),
+        Rule(
+            name="multiply_registers",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.MULTIPLY,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=1,
+            action="multiply",
+        ),
+        Rule(
+            name="multiply_reg_pow2",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.MULTIPLY,
+                children=(Need(REG), Need(POW2)),
+            ),
+            cost=1,
+            action="shift_right_operand",
+        ),
+        Rule(
+            name="multiply_pow2_reg",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.MULTIPLY,
+                children=(Need(POW2), Need(REG)),
+            ),
+            cost=1,
+            action="shift_left_operand",
+        ),
+        Rule(
+            name="less_than_reg",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.LESS,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=1,
+            action="less_than",
+        ),
+        Rule(
+            name="greater_than_reg",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.GREATER,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=1,
+            action="greater_than",
+        ),
+        Rule(
+            name="less_equal_reg",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.LESS_EQUAL,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=2,
+            action="less_equal",
+        ),
+        Rule(
+            name="greater_equal_reg",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.GREATER_EQUAL,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=2,
+            action="greater_equal",
+        ),
+        Rule(
+            name="equal_reg",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.EQUAL,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=2,
+            action="equal",
+        ),
+        Rule(
+            name="not_equal_reg",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.NOT_EQUAL,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=2,
+            action="not_equal",
+        ),
+        Rule(
+            name="less_than_cond",
+            result=COND,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.LESS,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=2,
+            action="branch_less_than",
+        ),
+        Rule(
+            name="less_equal_cond",
+            result=COND,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.LESS_EQUAL,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=2,
+            action="branch_less_equal",
+        ),
+        Rule(
+            name="greater_than_cond",
+            result=COND,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.GREATER,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=2,
+            action="branch_greater_than",
+        ),
+        Rule(
+            name="greater_equal_cond",
+            result=COND,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.GREATER_EQUAL,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=2,
+            action="branch_greater_equal",
+        ),
+        Rule(
+            name="equal_cond",
+            result=COND,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.EQUAL,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=2,
+            action="branch_equal",
+        ),
+        Rule(
+            name="not_equal_cond",
+            result=COND,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.NOT_EQUAL,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=2,
+            action="branch_not_equal",
+        ),
+        Rule(
+            name="logical_not_reg",
+            result=REG,
+            pattern=Pattern(
+                kind=UnaryExpr,
+                operator=UnaryOperator.NOT,
+                children=(Need(REG),),
+            ),
+            cost=1,
+            action="logical_not_reg",
+        ),
+        Rule(
+            name="logical_not_cond",
+            result=COND,
+            pattern=Pattern(
+                kind=UnaryExpr,
+                operator=UnaryOperator.NOT,
+                children=(Need(COND),),
+            ),
+            cost=0,
+            action="logical_not_cond",
+        ),
+        Rule(
+            name="logical_and_cond",
+            result=COND,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.LOGICAL_AND,
+                children=(Need(COND), Need(COND)),
+            ),
+            cost=0,
+            action="logical_and_cond",
+        ),
+        Rule(
+            name="logical_or_cond",
+            result=COND,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.LOGICAL_OR,
+                children=(Need(COND), Need(COND)),
+            ),
+            cost=0,
+            action="logical_or_cond",
+        ),
+        Rule(
+            name="logical_and_reg",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.LOGICAL_AND,
+                children=(Need(COND), Need(COND)),
+            ),
+            cost=3,
+            action="logical_and_reg",
+        ),
+        Rule(
+            name="logical_or_reg",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.LOGICAL_OR,
+                children=(Need(COND), Need(COND)),
+            ),
+            cost=3,
+            action="logical_or_reg",
+        ),
+        Rule(
+            name="bool_literal_cond",
+            result=COND,
+            pattern=Pattern(kind=BoolLiteral),
+            cost=1,
+            action="bool_literal_cond",
+        ),
+        Rule(
+            name="bool_identifier_cond",
+            result=COND,
+            pattern=Pattern(
+                kind=IdentifierExpr,
+                predicate=lambda node: node.metadata.get("type") is TypeName.BOOL,
+            ),
+            cost=2,
+            action="bool_identifier_cond",
+        ),
+        Rule(
+            name="call_reg",
+            result=REG,
+            pattern=Pattern(
+                kind=CallExpr,
+                children=(Args(REG),),
+                predicate=lambda node: node.metadata.get("type") is not TypeName.VOID,
+            ),
+            cost=1,
+            action="call_reg",
+        ),
+        Rule(
+            name="call_effect",
+            result=EFFECT,
+            pattern=Pattern(
+                kind=CallExpr,
+                children=(Args(REG),),
+                predicate=lambda node: node.metadata.get("type") is TypeName.VOID,
+            ),
+            cost=1,
+            action="call_effect",
+        ),
+        Rule(
+            name="bool_call_cond",
+            result=COND,
+            pattern=Pattern(
+                kind=CallExpr,
+                children=(Args(REG),),
+                predicate=lambda node: node.metadata.get("type") is TypeName.BOOL,
+            ),
+            cost=3,
+            action="bool_call_cond",
+        ),
+    ]
