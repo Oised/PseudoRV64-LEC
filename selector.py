@@ -11,7 +11,7 @@ def _match_pattern(node, pattern):
         if getattr(node, "operator", None) != pattern.operator:
             return None
 
-    if pattern.predicate is not None and pattern.predicate(node): # se o predicado não corresponder
+    if pattern.predicate is not None and not pattern.predicate(node): # se o predicado não corresponder
         return None
 
     actual_children = children(node)
@@ -34,8 +34,14 @@ def _match_pattern(node, pattern):
 
     subproblems = []
     for child, child_pattern in zip(actual_children, pattern_children): # para cada filho real
-        if not isinstance(child_pattern, Need): # se o filho do padrão não for um Pattern, levanta um ValueError
-            raise ValueError("filho do padrão deve ser Need ou Args")
+        if isinstance(child_pattern, Pattern): # filho estrutural: casa recursivamente, sem classe própria
+            nested = _match_pattern(child, child_pattern)
+            if nested is None:
+                return None
+            subproblems.extend(nested)
+            continue
+        if not isinstance(child_pattern, Need):
+            raise ValueError("filho do padrão deve ser Need, Pattern ou Args")
         subproblems.append((child, child_pattern.result)) # adiciona o filho real e a classe de resultado à lista de subproblemas
 
     return tuple(subproblems) # retorna a tupla de subproblemas
@@ -95,7 +101,6 @@ class Selector:
             for result_class, choice in best.items(): # para cada melhor escolha, adiciona a escolha à tabela de seleção
                 table.put(node, result_class, choice)
 
-            visiting.remove(node_id)
             visited.add(node_id)
 
         visit(expr)

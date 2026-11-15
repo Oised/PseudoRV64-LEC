@@ -133,6 +133,28 @@ def catalogue():
             action="subtract_imm12",
         ),
         Rule(
+            name="divide_registers",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.DIVIDE,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=1,
+            action="divide",
+        ),
+        Rule(
+            name="remainder_registers",
+            result=REG,
+            pattern=Pattern(
+                kind=BinaryExpr,
+                operator=BinaryOperator.REMAINDER,
+                children=(Need(REG), Need(REG)),
+            ),
+            cost=1,
+            action="remainder",
+        ),
+        Rule(
             name="multiply_registers",
             result=REG,
             pattern=Pattern(
@@ -394,11 +416,7 @@ def catalogue():
         Rule(
             name="call_effect",
             result=EFFECT,
-            pattern=Pattern(
-                kind=CallExpr,
-                children=(Args(REG),),
-                predicate=lambda node: node.metadata.get("type") is TypeName.VOID,
-            ),
+            pattern=Pattern(kind=CallExpr, children=(Args(REG),)),
             cost=1,
             action="call_effect",
         ),
